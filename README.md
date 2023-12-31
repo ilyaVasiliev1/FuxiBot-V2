@@ -1,1 +1,1 @@
-# FuxiBot-V2-voice-mode-
+# FuxiBot-V2-voice-mode
