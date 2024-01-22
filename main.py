@@ -6,9 +6,9 @@ import random
 import words
 from time import *
 import os 
-from config import TOKEN_BOT, BLOCKED_USERS, STOP_MSG, WELCOME_MSG, INFO_MSG, UNIT_NAMES, APIKEY
+from config import TOKEN_BOT, BLOCKED_USERS, STOP_MSG, INFO_MSG, UNIT_NAMES, APIKEY
 bot = telebot.TeleBot(TOKEN_BOT)
-
+testing = 0
 
 modelsAi = []
 for i in range(0, len(APIKEY)):
@@ -17,7 +17,6 @@ for i in range(0, len(APIKEY)):
 
 
 def communicateAi(receivedText):
-    
     message = []
     answer = None
     for indexModel in range(0, len(modelsAi)): #choose ai model for generating 
@@ -48,23 +47,22 @@ def chooseCommunicateText(comm, selectedUnit, sentence = '', userAnswer = ''): #
         wordsGen = words.wordsArray[f'unit{selectedUnit}']
         random.shuffle(wordsGen)
         if comm == "gen":
-            return f'''Составь с одним - пятью словами из списка: "{wordsGen}" одно небольшое предложение. Не используй слова, которых нет в списке! Можешь добавить грамматику: {words.grammarArray[f'unit{selectedUnit}']}. После напиши "|" и правильный перевод твоего предложения на русский язык.'''
+            return f'''Составь с одним - пятью словами из списка: "{wordsGen}" одно небольшое не сложное предложение. Не используй слова, которых нет в списке! Предложение должно быть приближенным к реальности. Можешь добавить грамматику: {words.grammarArray[f'unit{selectedUnit}']}. После напиши "|" и перевод твоего предложения на русский язык.'''
         elif comm == "com":
-            return f'''Мне дали список китайский слов: {words.wordsArray[f'unit{selectedUnit}']}. Также дали предложение, которое я должен перевести на китайский с использованием этого списка слов. Это предложение надо перевести: {sentence}. Мой перевод: {userAnswer}. Подскажи, правильно ли я дословно перевел, если есть ошибки, то кратко объясни их. Дай очень краткий ответ.'''
+            return f'''Мне дали список китайский слов: {words.wordsArray[f'unit{selectedUnit}']}. Также дали предложение, которое я должен перевести на китайский с использованием слов из этого списка. Я должен написать предложение схожее по переводу с этим: {sentence}. Мой перевод: {userAnswer}. Правильно ли я перевел, если есть ошибки, то кратко объясни их. Дай очень краткий ответ.'''
 
 
-@bot.message_handler(commands = ['start', 'info', 'stop', 'testing']) #choose message processing
+@bot.message_handler(commands = ['start', 'info', 'testing']) #choose message processing
 def command_processing(message):
     global typeTesting, selectedUnit, answerFlag, testing, userAnswer
+    print(testing)
     if message.chat.id not in BLOCKED_USERS:
         if message.text.startswith('/'):
             if message.text == '/start':
-                bot.send_message(message.chat.id, WELCOME_MSG)
+                bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}! Это бот для закрепления пройденного материала на уроках китайского языка. Для тестирования: /testing')
             elif message.text == '/info':
                 bot.send_message(message.chat.id, INFO_MSG, parse_mode='HTML')
-            elif message.text == '/stop':
-                bot.send_message(message.chat.id, STOP_MSG)
-                testing = 0
+
             elif message.text == '/testing':
                 item = []
                 markup = types.InlineKeyboardMarkup(row_width=2)
@@ -72,18 +70,17 @@ def command_processing(message):
                     item.append(types.InlineKeyboardButton(f"{i + 1}: {UNIT_NAMES[i]}", callback_data=f"Unit {i + 1}"))
                 for i in range(0, len(UNIT_NAMES)):
                     markup.add(item[i])
-                bot.send_message(message.chat.id, "Выберите UNIT, которых хотите практиковать", reply_markup=markup)
+                bot.send_message(message.chat.id, "Выберите UNIT, который хотите практиковать", reply_markup=markup)
                 
                 answerFlag = 1
                 selectedUnit = 0
                 typeTesting = 0
                 while answerFlag: pass
-                print(selectedUnit, typeTesting)
 
                 item = []
                 markup = types.InlineKeyboardMarkup(row_width=2)
-                item.append(types.InlineKeyboardButton("Voice", callback_data="Voice"))
                 item.append(types.InlineKeyboardButton("Text", callback_data="Text"))
+                item.append(types.InlineKeyboardButton("Voice (тестируется)", callback_data="Voice"))
                 markup.add(item[0])
                 markup.add(item[1])
 
@@ -91,14 +88,14 @@ def command_processing(message):
 
                 answerFlag = 1
                 while answerFlag: pass
-                print(selectedUnit, typeTesting)
+
+                print(f"chat id: {message.chat.id}, unit: {selectedUnit}, type tesing: {typeTesting}")
 
                 #---TESTING---
                 bot.send_message(message.chat.id, f"Тестирование запущено!")
 
                 testing = 1
                 while testing:
-                    bot.send_chat_action(message.chat.id, 'typing')
                     try:
                         sentence, translate = communicateAi(chooseCommunicateText("gen", selectedUnit=selectedUnit)).split("|")
                     except:
@@ -108,22 +105,22 @@ def command_processing(message):
                             bot.send_message(message.chat.id, "Извините, произошла ошибка. Тестирование завершено.")
                             break
                     
+                    print(f'Переведите\n{translate.lstrip()}, {sentence.lstrip()}')
                     bot.send_message(message.chat.id, f'<b>Переведите:</b>\n{translate.lstrip()}', parse_mode='HTML')
                     userAnswer = ''
                     while userAnswer == '': pass
+                    print(f"chat id: {message.chat.id}, {userAnswer}")
+                    if userAnswer == '/stop': 
+                        testing = 0
+                        break
+                    if typeTesting == 1:
+                        bot.send_message(message.chat.id, f"Распознано: {userAnswer}")
+                        print(f"Распознано: {userAnswer}")
+
                     bot.send_chat_action(message.chat.id, 'typing')
                     botAnswer = communicateAi(chooseCommunicateText("com", selectedUnit=selectedUnit, sentence=sentence, userAnswer=userAnswer))
                     bot.send_message(message.chat.id, botAnswer)
                     sleep(1)
-
-
-@bot.message_handler(func= lambda massage: True) #choose message processing
-def text_processing(message):
-    global userAnswer
-    if testing and typeTesting == 2:
-        userAnswer = message.text
-    elif typeTesting == 1:
-        bot.send_message(message.chat.id, "Простите, ваш режим - Voice. Отправьте голосовое сообщение с переводом.")
 
 
 @bot.callback_query_handler(func=lambda message:True)
@@ -137,6 +134,21 @@ def checkCallbackUnitType(callback):
         typeTesting = 2
     answerFlag = 0
     bot.delete_message(callback.message.chat.id, callback.message.id)
+
+
+@bot.message_handler(func= lambda massage: True) #choose message processing
+def text_processing(message):
+    global userAnswer, testing
+    if testing:
+        if message.text == '/stop':
+            bot.send_message(message.chat.id, STOP_MSG)
+            userAnswer = '/stop'
+        else:
+            if typeTesting == 2:
+                userAnswer = message.text
+            elif typeTesting == 1:
+                bot.send_message(message.chat.id, "Простите, ваш режим - Voice. Отправьте голосовое сообщение с переводом.")
+    
 
 
 @bot.message_handler(content_types=['voice'])
