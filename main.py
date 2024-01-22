@@ -3,10 +3,11 @@ from telebot import types
 import openai
 import traceback
 import random
-import words
+import words 
+from words import UNIT_NAMES
 from time import *
 import os 
-from config import TOKEN_BOT, BLOCKED_USERS, STOP_MSG, INFO_MSG, UNIT_NAMES, APIKEY
+from config import TOKEN_BOT, BLOCKED_USERS, APIKEY
 bot = telebot.TeleBot(TOKEN_BOT)
 testing = 0
 
@@ -61,7 +62,7 @@ def command_processing(message):
             if message.text == '/start':
                 bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}! Это бот для закрепления пройденного материала на уроках китайского языка. Для тестирования: /testing')
             elif message.text == '/info':
-                bot.send_message(message.chat.id, INFO_MSG, parse_mode='HTML')
+                bot.send_message(message.chat.id, 'Автор проекта: <b>Васильев Илья</b>\nПроект создан для повторения пройденного материала по китайскому, приятного пользования!', parse_mode='HTML')
 
             elif message.text == '/testing':
                 item = []
@@ -141,7 +142,7 @@ def text_processing(message):
     global userAnswer, testing
     if testing:
         if message.text == '/stop':
-            bot.send_message(message.chat.id, STOP_MSG)
+            bot.send_message(message.chat.id, f"Тестирование завершено!")
             userAnswer = '/stop'
         else:
             if typeTesting == 2:
